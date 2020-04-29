@@ -506,8 +506,20 @@ export class TaskService implements TaskConfigurationClient {
             }
         }
 
-        const tasks = await this.getWorkspaceTasks(task._scope);
         const resolvedMatchers = await this.resolveProblemMatchers(task, customizationObject);
+        const runTaskOption: RunTaskOption = {
+            customization: { ...customizationObject, ...{ problemMatcher: resolvedMatchers } }
+        };
+
+        if (task.dependsOn) {
+            return this.runCompoundTask(task, runTaskOption);
+        } else {
+            return this.runTask(task, runTaskOption);
+        }
+    }
+
+    async runCompoundTask(task: TaskConfiguration, option?: RunTaskOption): Promise<TaskInfo | undefined> {
+        const tasks = await this.getWorkspaceTasks(task._scope);
         try {
             const rootNode = new TaskNode(task, [], []);
             this.detectDirectedAcyclicGraph(task, rootNode, tasks);
@@ -516,9 +528,7 @@ export class TaskService implements TaskConfigurationClient {
             this.messageService.error(error.message);
             return undefined;
         }
-        return this.runTasksGraph(task, tasks, {
-            customization: { ...customizationObject, ...{ problemMatcher: resolvedMatchers } }
-        }).catch(error => {
+        return this.runTasksGraph(task, tasks, option).catch(error => {
             console.log(error.message);
             return undefined;
         });
