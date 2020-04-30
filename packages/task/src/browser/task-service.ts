@@ -514,7 +514,10 @@ export class TaskService implements TaskConfigurationClient {
         if (task.dependsOn) {
             return this.runCompoundTask(task, runTaskOption);
         } else {
-            return this.runTask(task, runTaskOption);
+            return this.runTask(task, runTaskOption).catch(error => {
+                console.error('Error at launching task', error);
+                return undefined;
+            });
         }
     }
 
@@ -524,12 +527,12 @@ export class TaskService implements TaskConfigurationClient {
             const rootNode = new TaskNode(task, [], []);
             this.detectDirectedAcyclicGraph(task, rootNode, tasks);
         } catch (error) {
-            this.logger.error(error.message);
+            console.error(`Error at launching task '${task.label}'`, error);
             this.messageService.error(error.message);
             return undefined;
         }
         return this.runTasksGraph(task, tasks, option).catch(error => {
-            console.log(error.message);
+            console.error(`Error at launching task '${task.label}'`, error);
             return undefined;
         });
     }
